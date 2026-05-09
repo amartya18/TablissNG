@@ -6,6 +6,11 @@ export const messages = defineMessages({
     defaultMessage: "[count] contributions in [year]",
     description: "Total count text for GitHub calendar",
   },
+  error: {
+    id: "plugins.github.error",
+    defaultMessage: "Error fetching GitHub contribution data.",
+    description: "Error text when GitHub calendar data cannot be loaded",
+  },
 });
 
 export const tooltipMessages = defineMessages({
