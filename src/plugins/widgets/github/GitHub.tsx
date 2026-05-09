@@ -1,7 +1,7 @@
 import "./GitHub.sass";
 
 import { FC } from "react";
-import { GitHubCalendar } from "react-github-calendar";
+import { ActivityCalendar } from "react-activity-calendar";
 import { useIntl } from "react-intl";
 
 import { useTheme } from "../../../hooks/useTheme";
@@ -10,6 +10,7 @@ import {
   monthMessages,
   weekdayMessages,
 } from "../../../locales/messages";
+import { useGitHubCalendar } from "./hooks";
 import { messages, tooltipMessages } from "./messages";
 import { defaultData, Props } from "./types";
 
@@ -43,8 +44,11 @@ const GitHubCalendarWidget: FC<Props> = ({ data = defaultData }) => {
     more: intl.formatMessage(calendarLegendMessages.more),
   };
   const { isDark } = useTheme();
+  const { calendar, loading, error } = useGitHubCalendar(data.username);
 
   if (!data.username) return null;
+  if (error && !calendar)
+    return <div>{intl.formatMessage(messages.error)}</div>;
 
   // Localization for the calendar
   const labels = {
@@ -96,13 +100,15 @@ const GitHubCalendarWidget: FC<Props> = ({ data = defaultData }) => {
         textDecoration: "none",
       }}
     >
-      <GitHubCalendar
+      <ActivityCalendar
+        data={calendar ?? []}
+        loading={loading && !calendar}
         showColorLegend={data.showColorLegend}
         showMonthLabels={data.showMonthLabels}
         showTotalCount={data.showTotalCount}
-        username={data.username}
         labels={labels}
         colorScheme={isDark ? "dark" : "light"}
+        maxLevel={4}
         theme={{
           light: ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"],
           dark: ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"],
