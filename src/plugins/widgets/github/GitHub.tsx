@@ -102,7 +102,7 @@ const GitHubCalendarWidget: FC<Props> = ({ data = defaultData }) => {
     >
       <ActivityCalendar
         data={calendar ?? []}
-        loading={loading && !calendar}
+        loading={loading || !calendar}
         showColorLegend={data.showColorLegend}
         showMonthLabels={data.showMonthLabels}
         showTotalCount={data.showTotalCount}
