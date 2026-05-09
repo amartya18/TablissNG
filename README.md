@@ -1,162 +1,37 @@
-<p align="left">
-  <img src="src/views/shared/tabliss.svg" alt="TablissNG logo" width="400" />
-</p>
+# TablissNG
 
-> A beautiful, customisable New Tab page for Firefox and Chrome.
+TablissNG is a fork of [Tabliss](https://github.com/joelshepherd/tabliss), a customizable new tab page for browsers.
 
-<img src="screenshots/screenshot_1.png" width="49%"/> <img src="screenshots/screenshot_2.png" width="50%"/>
-<img src="screenshots/screenshot_3.png" width="49%"/> <img src="screenshots/screenshot_4.png" width="50%"/>
-<img src="screenshots/screenshot_5.png" width="24%"/>
-<img src="screenshots/screenshot_6.png" width="24%"/>
-<img src="screenshots/screenshot_7.png" width="24%"/>
-<img src="screenshots/screenshot_8.png" width="24%"/>
+## Load Locally In Chromium
 
-<div align="center">
-    <a href="https://chromewebstore.google.com/detail/tablissng/dlaogejjiafeobgofajdlkkhjlignalk">
-        <img src="https://img.shields.io/chrome-web-store/users/dlaogejjiafeobgofajdlkkhjlignalk?logo=googlechrome&logoColor=ffffff&color=0779ba"></a>
-    <a href="https://addons.mozilla.org/en-US/firefox/addon/tablissng/">
-        <img src="https://img.shields.io/amo/users/tablissng?logo=firefoxbrowser&logoColor=ffffff"></a>
-    <a href="https://github.com/BookCatKid/TablissNG/stargazers">
-        <img src="https://img.shields.io/github/stars/BookCatKid/TablissNG?style=flat"></a>
-    <a href="https://github.com/BookCatKid/TablissNG/commits/main/">
-        <img src="https://img.shields.io/github/last-commit/BookCatKid/TablissNG?color=0779ba"></a>
-    <a href="https://github.com/BookCatKid/TablissNG/releases/latest">
-        <img src="https://img.shields.io/github/v/release/BookCatKid/TablissNG.svg?logo=github"></a>
-    <a href="https://www.gnu.org/licenses/gpl-3.0">
-        <img src="https://img.shields.io/badge/License-GNU%20GPL%20v3-blue"></a>
-</div>
-
-## Maintained Fork of Tabliss
-
-This repository is a maintained fork of Tabliss, originally a customizable new tab page for Firefox and Chrome. The original project has been abandoned, with no updates for over a year and numerous unmerged pull requests. I cloned the repository and merged most pending pull requests to bring in improvements and bug fixes. Moving forward, I will actively maintain and update this fork to keep Tabliss functional and up to date.
-
-### What's Next?
-
-- Continued updates and bug fixes
-- Adding new features from community contributions
-- Keeping dependencies up to date
-
-If you were a contributor to the original repo or have ideas for improvements, feel free to open an issue or submit a pull request. Let’s keep Tabliss alive!
-
-### Looking for contribution ideas?
-
-Check out the [github project](https://github.com/users/BookCatKid/projects/3?query=sort%3Aupdated-desc+is%3Aopen) for a list of features that are wanted, but not yet implemented. Anything not in `in progress` is most likely free for you to work on!
-
----
-
-## Brief Overview of a Few Improvements Over Tabliss
-
-This list is by no means exhaustive. TablissNG includes many other tweaks, quality-of-life improvements, and features not detailed here.
-
-- Customization
-  - Support for custom search engines and browser defaults
-  - Many more style options in display/font settings (eg. scale, underline, text outline, custom css class)
-
-- Widgets
-  - Time Tracker, Bitcoin Mempool, Top Sites, Binary Clock, Bookmarks, Custom HTML.
-  - Enhancements: Daily Routine for Todos, Bible verses in Quotes, Markdown in Notes
-  - "Free Move" mode for dragging widgets
-
-- Backgrounds & Visuals
-  - Wikimedia Image of the Day, NASA APOD, Giphy Image of the Day
-  - Support for Videos, GIFs, and online image URLs
-  - Automatic night dimming and random gradients
-
-- Interface & Accessibility
-  - Full dark mode
-  - Complete translation support for all settings
-
-## Installation
-
-<a href="https://addons.mozilla.org/en-US/firefox/addon/tablissng/"><img src="assets/badges/firefox-badge.svg" height="70"></a>
-<a href="https://chromewebstore.google.com/detail/tablissng/dlaogejjiafeobgofajdlkkhjlignalk"><img src="assets/badges/chrome-badge.png" alt="Get the Extension on Chrome" height="70" style="border-radius:4px;"></a>
-<a href="https://microsoftedge.microsoft.com/addons/detail/tablissng/mkaphhbkcccpgkfaifhhdfckagnkcmhm"><img src="assets/badges/edge-badge.png" alt="Get the Extension on Edge" height="70"></a>
-
-The extension is available in the [Firefox Add-ons Store](https://addons.mozilla.org/en-US/firefox/addon/tablissng/), in the [Chrome Web Store](https://chromewebstore.google.com/detail/tablissng/dlaogejjiafeobgofajdlkkhjlignalk), and in the [Edge Add-ons Store](https://microsoftedge.microsoft.com/addons/detail/tablissng/mkaphhbkcccpgkfaifhhdfckagnkcmhm). If you want to use Safari, see [INSTALL.md](INSTALL.md).
-
-**Nightly Builds (Firefox):**
-
-- **Nightly** (v1.6.5.0): [Install Nightly](https://github.com/BookCatKid/TablissNG/releases/download/nightly-auto/tablissng-1.6.5.0.xpi)
-
-If you want to install the extension manually, or want nightly builds, see [INSTALL.md](INSTALL.md).
-
-## Running Locally
-
-For local development, you'll need Node.js and pnpm installed. Latest versions should work.
-
-First, clone the repo:
-
-```sh
-git clone https://github.com/BookCatKid/TablissNG.git
-cd TablissNG
-```
-
-Then install the dependencies:
+Install dependencies:
 
 ```sh
 pnpm install
 ```
 
-### Available Commands
-
-- `pnpm run dev` — Start a local development server
-- `pnpm run build` — Build the project
-- `pnpm run test` — Run tests
-- `pnpm run translations` — Extract and sync translation files (see [TRANSLATING.md](TRANSLATING.md) for details)
-- `pnpm run translations status` — Show translation status (pass language, e.g. `pnpm run translations status fr`)
-- `pnpm run translations create` — Create a new locale file (pass language, e.g. `pnpm run translations create de-AT`)
-- `pnpm run translations migrate` — Migrate renamed translation keys (e.g. `pnpm run translations migrate --map old.id=new.id`)
-- `pnpm run lint:fix` — Run ESLint with --fix (or just `pnpm run lint` for checking)
-- `pnpm run prettier` — Run Prettier with --write (or `pnpm run prettier:check` for checking)
-- `pnpm run deps:update` — Run interactive dependency update tool (or `pnpm run deps:check` to just check for updates and unused dependencies)
-
-By default, build and dev will target the web version. To specify a platform (Chromium or Firefox), append `:chromium` or `:firefox` to the command. For example:
+Build the Chromium extension:
 
 ```sh
-pnpm run dev:chromium
-pnpm run build:firefox
+pnpm run build:chromium
 ```
 
-<details>
-  <summary>To test extension locally</summary>
-  <br>
-  <p>Find the extension in <code>dist</code> folder.</p>
+Open your browser extensions page:
 
-  <p>For Chrome, go to <code>chrome://extensions</code>, turn on devoloper mode and click on "Load unpacked".</p>
-
-  <p>For Firefox, go to <code>about:debugging#/runtime/this-firefox</code> and click on "Load Temporary Add-on".</p>
-</details>
-
-### Environment variables
-
-To develop with external services, you'll need to sign up for API keys and enter them into your `.env` file. Start by copying the example:
-
-```sh
-cp .env.example .env
+```text
+chrome://extensions
 ```
 
-Then, fill in your API keys:
+For Brave, use:
 
-```ini
-GIPHY_API_KEY=your_key_here
-UNSPLASH_API_KEY=your_key_here
-NASA_API_KEY=your_key_here
-TRELLO_API_KEY=your_key_here # this requires the correct redirect URI to be set up in your Trello app settings: https://53dad6be72180770ccc08f0a6e2fc8a64dcf7b42.extensions.allizom.org and https://dlaogejjiafeobgofajdlkkhjlignalk.chromiumapp.org should work for firefox and chromium respectively.
+```text
+brave://extensions
 ```
 
-## Credits
+Enable **Developer mode**, click **Load unpacked**, then select:
 
-Special thanks to **joelshepherd** for originally creating and maintaining this project.
-Also, huge appreciation to everyone who contributed, especially those whose pull requests I merged!
+```text
+dist/chromium
+```
 
-<a href="https://github.com/BookCatKid/TablissNG/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=BookCatKid/TablissNG&max=30" />
-</a>
-
-## Contributing
-
-Take a look at the guide to [contributing](CONTRIBUTING.md) before starting.
-
-## Translations
-
-Check out the guide to [adding translations](TRANSLATING.md).
+After making code changes, rebuild with `pnpm run build:chromium`, then reload the extension from the extensions page.
