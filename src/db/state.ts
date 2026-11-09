@@ -1,5 +1,8 @@
 import { DB, Storage } from "../lib";
 import { defaultLocale } from "../locales";
+import { cache } from "./cache";
+
+export { cache } from "./cache";
 
 /**
  * Database state
@@ -37,16 +40,12 @@ export interface State {
   favicon: FaviconState;
   /** Global accent color in hex format */
   accent: string;
+  /** Whether to send anonymised crash reports to Sentry */
+  crashReportingEnabled: boolean;
 }
 
 export type FaviconMode =
-  | "default"
-  | "size32"
-  | "size48"
-  | "size96"
-  | "size128"
-  | "custom"
-  | "url";
+  "default" | "size32" | "size48" | "size96" | "size128" | "custom" | "url";
 
 export interface FaviconState {
   mode: FaviconMode;
@@ -111,6 +110,8 @@ export interface WidgetDisplay {
   customClass?: string;
   /** Whether to use the global accent color instead of a specific color */
   useAccentColor?: boolean;
+  /** Whether the widget is disabled (not rendered on the dashboard) */
+  disabled?: boolean;
 }
 
 export type WidgetPosition =
@@ -170,13 +171,11 @@ const initData: State = {
     data: null,
   },
   accent: "#3498db",
+  crashReportingEnabled: true,
 };
 
 // Database storage
 export const db = DB.init<State>(initData);
-
-// Cache storage
-export const cache = DB.init<Record<string, unknown | undefined>>();
 
 // Persist data
 export const dbStorage =

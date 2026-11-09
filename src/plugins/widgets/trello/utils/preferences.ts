@@ -10,7 +10,7 @@ export const applyPreferences = async (
   preference: BoardPreference,
 ) => {
   return lists.map((list) => {
-    const match = preference.lists.find((item) => item.id === list.id);
-    return match ? { ...list, watch: match.watch } : list;
+    const match = preference.lists.find((card) => card.id === list.id);
+    return match ? { ...list, selected: match.selected } : list;
   });
 };

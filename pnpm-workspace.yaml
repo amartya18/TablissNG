@@ -1,7 +1,17 @@
 packages:
   - "docs"
+
 allowBuilds:
-  '@parcel/watcher': true
-  '@swc/core': true
-  core-js: true
-  unrs-resolver: true
+  '@parcel/watcher': false
+  '@sentry/cli': true
+  '@swc/core': false
+  core-js: false
+
+minimumReleaseAgeStrict: true
+
+update:
+  githubActions: true
+
+overrides:
+  serialize-javascript: ">=7.0.5"
+  uuid: ">=11.1.1"

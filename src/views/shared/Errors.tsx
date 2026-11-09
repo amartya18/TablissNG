@@ -1,9 +1,12 @@
-import { Icon } from "@iconify/react";
-import { type FC, useContext, useState } from "react";
+import { type FC, useContext } from "react";
 import { defineMessages, FormattedMessage, useIntl } from "react-intl";
 
 import { ErrorContext } from "../../contexts/error";
+import { db } from "../../db/state";
 import { formatErrorLog } from "../../errorHandler";
+import { useClipboard } from "../../hooks";
+import { Icon } from "../../icons";
+import { useKey } from "../../lib/db/react";
 import Modal from "./modal/Modal";
 
 const messages = defineMessages({
@@ -31,27 +34,11 @@ type Props = {
 const Errors: FC<Props> = ({ onClose }) => {
   const { errors } = useContext(ErrorContext);
   const intl = useIntl();
-  const [copied, setCopied] = useState(false);
-  const [copyFailed, setCopyFailed] = useState(false);
-
-  const handleCopy = () => {
-    if (!navigator.clipboard?.writeText) {
-      setCopyFailed(true);
-      setTimeout(() => setCopyFailed(false), 3000);
-      return;
-    }
-    const text = formatErrorLog();
-    navigator.clipboard.writeText(text).then(
-      () => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      },
-      () => {
-        setCopyFailed(true);
-        setTimeout(() => setCopyFailed(false), 3000);
-      },
-    );
-  };
+  const { copy, copied, error: copyFailed } = useClipboard();
+  const [crashReportingEnabled, setCrashReportingEnabled] = useKey(
+    db,
+    "crashReportingEnabled",
+  );
 
   return (
     <Modal onClose={onClose}>
@@ -71,9 +58,12 @@ const Errors: FC<Props> = ({ onClose }) => {
               description="Title of the error log panel"
             />
           </h2>
-          <button className="button button--primary" onClick={handleCopy}>
+          <button
+            className="button button--primary"
+            onClick={() => copy(formatErrorLog())}
+          >
             <Icon
-              icon={
+              name={
                 copyFailed
                   ? "feather:x"
                   : copied
@@ -101,6 +91,25 @@ const Errors: FC<Props> = ({ onClose }) => {
             />
           </a>
         </div>
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            cursor: "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={crashReportingEnabled}
+            onChange={(e) => setCrashReportingEnabled(e.target.checked)}
+          />
+          <FormattedMessage
+            id="settings.crashReporting"
+            defaultMessage="Send Anonymous Crash Reports"
+            description="Crash reporting opt-out toggle label"
+          />
+        </label>
         {errors.length === 0 ? (
           <p>
             <FormattedMessage

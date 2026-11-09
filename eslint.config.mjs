@@ -32,6 +32,7 @@ export default defineConfig(
       "@typescript-eslint/ban-ts-comment": "warn",
       "@eslint-react/no-use-context": "off",
       "@eslint-react/no-context-provider": "off",
+      "formatjs/blocklist-elements": ["error", ["selectordinal"]],
       "simple-import-sort/imports": "error",
       "simple-import-sort/exports": "error",
       "local/require-option-value": "error",
@@ -40,7 +41,7 @@ export default defineConfig(
   {
     files: [
       "rspack.config.js",
-      "scripts/**/*.js",
+      "scripts/**/*.{js,mjs}",
       "eslint.config.mjs",
       "docs/sync-assets.js",
     ],

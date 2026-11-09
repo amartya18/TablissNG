@@ -1,24 +1,19 @@
-import { ChangeEvent, FC, useRef } from "react";
+import { ChangeEvent, FC } from "react";
 import { FormattedMessage } from "react-intl";
 
 import useAuth from "../../../hooks/useAuth";
+import { useFreshReducer } from "../../../hooks/useFreshReducer";
 import { commonMessages } from "../../../locales/messages";
 import Button from "../../../views/shared/Button";
 import { Spinner } from "../../shared";
-import useBoards from "./hooks/useBoards";
-import useLists from "./hooks/useLists";
+import { useBoards } from "./hooks/useBoards";
+import { useLists } from "./hooks/useLists";
+import { cacheReducer } from "./reducers";
+import { dataReducer } from "./reducers";
 import { trelloAuthStore } from "./stores/trelloAuthStore";
-import {
-  BoardPreference,
-  createFetchJob,
-  defaultCache,
-  defaultData,
-  FetchJob,
-  Props,
-  TrelloSession,
-} from "./types";
-import { Board, List } from "./types";
-import ListCheckbox from "./ui/ListCheckbox/ListCheckbox";
+import { defaultCache, defaultData, Props, TrelloSession } from "./types";
+import { Board } from "./types";
+import { ListCheckbox } from "./ui/ListCheckbox";
 import { onTrelloSignOut, trelloAuthFlow } from "./utils/auth";
 
 const TrelloSettings: FC<Props> = ({
@@ -34,19 +29,15 @@ const TrelloSettings: FC<Props> = ({
     signOut,
   } = useAuth<TrelloSession>("trello", trelloAuthStore);
 
-  const { boards, isLoading: boardsLoading } = useBoards(data, setData);
+  const dispatchData = useFreshReducer(dataReducer, data, setData);
+  const { boards, isLoading: boardsLoading } = useBoards(data, dispatchData);
+  const dispatchUI = useFreshReducer(cacheReducer, cache, setCache);
 
   const {
     lists,
     setLists,
     isLoading: listsLoading,
-    updateUI,
-    updateUIWithSkeletons,
-  } = useLists(data, cache, setCache);
-
-  const pendingJobsRef = useRef<Set<FetchJob>>(new Set<FetchJob>());
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const DEBOUNCE_INTERVAL = 525;
+  } = useLists(data, dispatchUI);
 
   const onAuthenticateClick = async () => {
     await signIn(trelloAuthFlow);
@@ -54,64 +45,40 @@ const TrelloSettings: FC<Props> = ({
 
   const onSignout = async () => {
     await signOut(onTrelloSignOut);
-    setCache(defaultCache);
+    dispatchUI({ type: "CLEAR" });
   };
 
   const onBoardSelect = (event: ChangeEvent<HTMLSelectElement>) => {
-    setData({ ...data, selectedID: event.target.value });
-    setCache(defaultCache);
+    dispatchData({ type: "SET_SELECTED_BOARD", boardId: event.target.value });
+    dispatchUI({ type: "CLEAR" });
   };
 
   const onListCheckboxSelect = (listID: string) => {
-    const found = lists.find((list: List) => list.id === listID);
-    if (!found) {
+    const targetList = lists.find((l) => l.id === listID);
+    if (!targetList) {
       return;
     }
 
-    const action: "ADD" | "REMOVE" = found.watch ? "REMOVE" : "ADD";
-    if (action === "REMOVE") {
-      pendingJobsRef.current.forEach(
-        (job) => job.listId === listID && pendingJobsRef.current.delete(job),
-      );
-    } else {
-      pendingJobsRef.current.add(createFetchJob(listID));
-    }
-
-    // update the settings UI
-    const updatedOptions = lists.map((list: List) => {
-      return list.id === listID ? { ...list, watch: !list.watch } : list;
+    // Toggle the selected status for the checked list
+    const updatedSettingsOptions = lists.map((l) => {
+      return l.id === listID ? { ...l, selected: !l.selected } : l;
     });
+    setLists(updatedSettingsOptions);
 
-    setLists(updatedOptions);
-    const selectedLists = updatedOptions.filter((list: List) => list.watch);
-    const newPreference: BoardPreference = {
+    // Update preferences
+    const selectedLists = updatedSettingsOptions.filter((l) => l.selected);
+    const order = selectedLists.map((l) => l.id);
+
+    dispatchData({
+      type: "ADD_PREFERENCE",
       boardId: data.selectedID!,
       lists: selectedLists,
-    };
-
-    const updated = {
-      ...data.preferences,
-      [data.selectedID!]: newPreference,
-    };
-    setData({ ...data, preferences: updated });
-
-    // optimistically update UI with skeletons
-    console.log("TRELLO: Updating skeletons");
-    updateUIWithSkeletons(
-      updatedOptions.filter((list: List) => list.watch),
-      pendingJobsRef.current,
-    );
-
-    // debouncing logic for rapid selection
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-
-    debounceTimeoutRef.current = setTimeout(() => {
-      // update the UI and set the skeleton jobs to actual jobs and newest selections
-      updateUI(listID, selectedLists, pendingJobsRef.current, action);
-      pendingJobsRef.current.clear();
-    }, DEBOUNCE_INTERVAL);
+    });
+    dispatchUI({
+      type: "TOGGLE_LIST_VISIBILITY",
+      order: order,
+      target: targetList,
+    });
   };
 
   if (authState !== "authenticated") {
@@ -134,22 +101,14 @@ const TrelloSettings: FC<Props> = ({
         </label>
         <Button
           disabled={authState === "pending"}
-          primary
+          primary={authState !== "pending"}
           onClick={onAuthenticateClick}
         >
-          {authState === "unauthenticated" ? (
-            <FormattedMessage
-              id="plugins.trello.authenticate.button"
-              defaultMessage="Authenticate"
-              description="Button text to start Trello authentication"
-            />
-          ) : (
-            <FormattedMessage
-              id="plugins.trello.authenticating"
-              defaultMessage="Authenticating..."
-              description="Status message while Trello authentication is in progress"
-            />
-          )}
+          <FormattedMessage
+            id="plugins.trello.authenticate.button"
+            defaultMessage="Authenticate"
+            description="Button text to start Trello authentication"
+          />
         </Button>
       </>
     );
@@ -201,11 +160,11 @@ const TrelloSettings: FC<Props> = ({
                 <Spinner size={16} />
               </div>
             ) : (
-              lists.map((list: List, index) => {
+              lists.map((list, index) => {
                 return (
                   <ListCheckbox
                     key={list.id}
-                    checked={list.watch}
+                    checked={list.selected}
                     index={index}
                     listID={list.id}
                     label={list.name}

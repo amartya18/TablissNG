@@ -21,6 +21,7 @@ export default function useAuth<T extends Session>(
   store: Store<AuthState>,
 ) {
   const { status: authStatus, setStatus: setAuthStatus } = store();
+  const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
   const [authError, setAuthError] = useState<string | null>("");
 
   const getSession = async (): Promise<T | null> => {
@@ -47,25 +48,22 @@ export default function useAuth<T extends Session>(
     }
   };
 
-  // check authentication status on load
   useEffect(() => {
     const effect = async () => {
       try {
         const auth = await checkAuth();
         setAuthStatus(auth ? "authenticated" : "unauthenticated");
       } catch (err) {
-        console.error("TRELLO AUTH CHECK ERROR: ", err);
+        console.error("AUTH: Error checking authentication status: ", err);
         setAuthError("Failed to check authentication status");
         setAuthStatus("unauthenticated");
+      } finally {
+        setCheckingAuth(false);
       }
     };
 
-    // prevent cases where signing in triggers the hook to sign the user back in
-    // if the user is attempting to sign out stop the hook
-    if (authStatus !== "pending") {
-      effect();
-    }
-  }, []);
+    effect();
+  }, [setAuthStatus, setCheckingAuth, setAuthError]);
 
   /**
    * Attempts to authenticate user via an authentication method
@@ -73,7 +71,7 @@ export default function useAuth<T extends Session>(
    * @param authFlow
    */
   const signIn = async (authFlow: () => Promise<T | null>) => {
-    console.log("Authenticating");
+    console.log("AUTH: Authenticating");
     setAuthStatus("pending");
     try {
       const session: T | null = await authFlow();
@@ -83,7 +81,7 @@ export default function useAuth<T extends Session>(
       await browser.storage.local.set({ [sessionName]: { ...session } });
       setAuthStatus("authenticated");
     } catch (err) {
-      console.error("TRELLO SIGN IN ERROR: ", err);
+      console.error("AUTH: SIGN IN ERROR: ", err);
       setAuthError("Failed to authenticate user");
       setAuthStatus("unauthenticated");
     }
@@ -104,11 +102,11 @@ export default function useAuth<T extends Session>(
         await onSignOut(session);
       }
     } catch (error) {
-      console.error("TRELLO: Failed to run onSignOut");
+      console.error("AUTH: Failed to run onSignOut");
     } finally {
       setAuthStatus("unauthenticated");
     }
   };
 
-  return { authStatus, authError, getSession, signIn, signOut };
+  return { authStatus, authError, getSession, signIn, signOut, checkingAuth };
 }

@@ -1,6 +1,5 @@
 import "./Settings.sass";
 
-import { Icon } from "@iconify/react";
 import { useEffect, useRef, useState } from "react";
 import { type FC, memo, useContext, useMemo } from "react";
 import GitHubButton from "react-github-btn";
@@ -9,8 +8,9 @@ import { defineMessages, FormattedMessage, useIntl } from "react-intl";
 import { UiContext } from "../../contexts/ui";
 import { exportStore, importStore, resetStore } from "../../db/action";
 import { db } from "../../db/state";
-import { useKeyPress } from "../../hooks";
+import { useClipboard, useKeyPress } from "../../hooks";
 import { useTheme } from "../../hooks";
+import { Icon } from "../../icons";
 import { useKey } from "../../lib/db/react";
 import Logo from "../shared/Logo";
 import Background from "./Background";
@@ -45,12 +45,50 @@ const messages = defineMessages({
     defaultMessage: "Star BookCatKid/tablissNG on GitHub",
     description: "ARIA label for the GitHub star button",
   },
+  ariaSponsor: {
+    id: "settings.aria.sponsor",
+    defaultMessage: "Sponsor TablissNG on GitHub",
+    description: "ARIA label for the GitHub Sponsors link",
+  },
+  sponsor: {
+    id: "settings.support.sponsor",
+    defaultMessage: "Sponsor",
+    description: "Call to action to sponsor TablissNG on GitHub",
+  },
   settingsImportExportReset: {
     id: "settings.importExportReset",
     defaultMessage:
       "<import>Import</import>, <export>export</export> or <reset>reset</reset> your settings",
     description:
       "Links for import/export/reset at the bottom of settings. Uses XML-like tags to style each action word as a clickable link.",
+  },
+  settingsStartupUrlTitle: {
+    id: "settings.startupUrl.title",
+    defaultMessage: "Startup Page URL",
+    description: "Title for the startup page URL section",
+  },
+  settingsStartupUrlDescription: {
+    id: "settings.startupUrl.description",
+    defaultMessage:
+      "For browsers like Vivaldi, copy this URL to set TablissNG as your startup page. <link>Learn more</link>.",
+    description:
+      "Description for the startup page URL section. The <link> tag wraps a clickable link to the docs.",
+  },
+  copyTooltip: {
+    id: "settings.startupUrl.copyTooltip",
+    defaultMessage: "Copy URL to clipboard",
+    description: "Tooltip for the copy URL button",
+  },
+  copySuccess: {
+    id: "settings.startupUrl.copySuccess",
+    defaultMessage: "Copied!",
+    description:
+      "Toast or indicator text shown after successfully copying the URL",
+  },
+  copyButton: {
+    id: "settings.startupUrl.copyButton",
+    defaultMessage: "Copy",
+    description: "Label for the copy URL button",
   },
 });
 
@@ -63,6 +101,9 @@ const Settings: FC = () => {
   const [isHovered, setIsHovered] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const planeRef = useRef<HTMLDivElement>(null);
+  const { copy, copied } = useClipboard();
+
+  const startupUrl = window.location.origin + window.location.pathname;
 
   const settingsOnRight =
     settingsIconPosition === "bottomRight" ||
@@ -200,7 +241,7 @@ const Settings: FC = () => {
               gap: "0.3rem",
             }}
           >
-            <Icon icon="feather:tag" style={{ fontSize: "0.9em" }} />
+            <Icon name="feather:tag" style={{ fontSize: "0.9em" }} />
             TablissNG v{VERSION} {DEV ? "DEV " : ""}
           </span>
         </div>
@@ -220,6 +261,58 @@ const Settings: FC = () => {
         {/* Only relevant for the web build where IndexedDB may be evicted. Hide for extension builds to avoid confusing prompts in Firefox/Chromium. */}
         {BUILD_TARGET === "web" && <Persist />}
 
+        {BUILD_TARGET !== "web" && (
+          <div className="Widget" style={{ textAlign: "center" }}>
+            <h4>
+              <FormattedMessage {...messages.settingsStartupUrlTitle} />
+            </h4>
+            <p>
+              <FormattedMessage
+                {...messages.settingsStartupUrlDescription}
+                values={{
+                  link: (chunks) => (
+                    <a
+                      href="https://tablissng.smrff.dev/support/vivaldi-startup"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {chunks}
+                    </a>
+                  ),
+                }}
+              />
+            </p>
+            <input
+              type="text"
+              readOnly
+              value={startupUrl}
+              style={{ textAlign: "left", marginTop: "0.75rem" }}
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+            />
+            <button
+              onClick={() => copy(startupUrl)}
+              className="button button--primary"
+              style={{ marginTop: "0.5rem" }}
+              title={intl.formatMessage(
+                copied ? messages.copySuccess : messages.copyTooltip,
+              )}
+              aria-label={intl.formatMessage(
+                copied ? messages.copySuccess : messages.copyTooltip,
+              )}
+            >
+              <Icon
+                name={copied ? "feather:check" : "feather:copy"}
+                style={{ marginRight: "0.3rem" }}
+              />
+              {copied ? (
+                <FormattedMessage {...messages.copySuccess} />
+              ) : (
+                <FormattedMessage {...messages.copyButton} />
+              )}
+            </button>
+          </div>
+        )}
+
         <div style={{ textAlign: "center" }} className="Widget">
           <h4>
             <FormattedMessage
@@ -234,9 +327,9 @@ const Settings: FC = () => {
               <div
                 style={{
                   marginTop: "14px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "14px",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: "10px",
                   width: "100%",
                 }}
               >
@@ -258,56 +351,60 @@ const Settings: FC = () => {
                         width: "100%",
                       }}
                     >
-                      <Icon icon="feather:code" />{" "}
+                      <Icon name="feather:code" />{" "}
                       <FormattedMessage
                         id="settings.support.contribute"
-                        defaultMessage="Contribute to the project!"
+                        defaultMessage="Contribute"
                         description="Call to action to contribute to the project"
                       />
                     </span>
                   </GitHubButton>
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "10px",
-                    width: "100%",
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <GitHubButton
-                      href="https://github.com/BookCatKid/tablissNG/subscription"
-                      data-icon="octicon-eye"
-                      data-size="large"
-                      data-show-count="true"
-                      data-color-scheme={isDark ? "dark" : "light"}
-                      aria-label={intl.formatMessage(messages.ariaWatch)}
-                    >
-                      <FormattedMessage
-                        id="settings.github.watch"
-                        defaultMessage="Watch"
-                        description="GitHub Watch button text"
-                      />
-                    </GitHubButton>
-                  </div>
+                <div style={{ width: "100%" }}>
+                  <GitHubButton
+                    href="https://github.com/sponsors/BookCatKid"
+                    data-icon="octicon-heart"
+                    data-size="large"
+                    data-color-scheme={isDark ? "dark" : "light"}
+                    aria-label={intl.formatMessage(messages.ariaSponsor)}
+                  >
+                    <FormattedMessage {...messages.sponsor} />
+                  </GitHubButton>
+                </div>
 
-                  <div style={{ flex: 1 }}>
-                    <GitHubButton
-                      href="https://github.com/BookCatKid/tablissNG"
-                      data-icon="octicon-star"
-                      data-size="large"
-                      data-show-count="true"
-                      data-color-scheme={isDark ? "dark" : "light"}
-                      aria-label={intl.formatMessage(messages.ariaStar)}
-                    >
-                      <FormattedMessage
-                        id="settings.github.star"
-                        defaultMessage="Star"
-                        description="GitHub Star button text"
-                      />
-                    </GitHubButton>
-                  </div>
+                <div style={{ width: "100%" }}>
+                  <GitHubButton
+                    href="https://github.com/BookCatKid/tablissNG/subscription"
+                    data-icon="octicon-eye"
+                    data-size="large"
+                    data-show-count="true"
+                    data-color-scheme={isDark ? "dark" : "light"}
+                    aria-label={intl.formatMessage(messages.ariaWatch)}
+                  >
+                    <FormattedMessage
+                      id="settings.github.watch"
+                      defaultMessage="Watch"
+                      description="GitHub Watch button text"
+                    />
+                  </GitHubButton>
+                </div>
+
+                <div style={{ width: "100%" }}>
+                  <GitHubButton
+                    href="https://github.com/BookCatKid/tablissNG"
+                    data-icon="octicon-star"
+                    data-size="large"
+                    data-show-count="true"
+                    data-color-scheme={isDark ? "dark" : "light"}
+                    aria-label={intl.formatMessage(messages.ariaStar)}
+                  >
+                    <FormattedMessage
+                      id="settings.github.star"
+                      defaultMessage="Star"
+                      description="GitHub Star button text"
+                    />
+                  </GitHubButton>
                 </div>
               </div>
             ),
@@ -329,7 +426,7 @@ const Settings: FC = () => {
           onClick={scrollToTop}
           title={intl.formatMessage(messages.scrollToTop)}
         >
-          <Icon icon="feather:arrow-up" />
+          <Icon name="feather:arrow-up" />
         </button>
       )}
     </div>

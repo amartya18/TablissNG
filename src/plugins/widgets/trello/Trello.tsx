@@ -1,116 +1,233 @@
 import "./Trello.sass";
 
-import { FC, useEffect } from "react";
+import { FC, useCallback, useEffect, useMemo, useRef } from "react";
 import { FormattedMessage } from "react-intl";
 
 import useAuth from "../../../hooks/useAuth";
+import { useFreshReducer } from "../../../hooks/useFreshReducer";
+import { useSelectedBoard } from "./hooks/useSelectedBoard";
+import { cacheReducer } from "./reducers";
 import { trelloAuthStore } from "./stores/trelloAuthStore";
-import { defaultCache, List, Props, TrelloSession } from "./types";
-import DisplayList from "./ui/DisplayList/DisplayList";
-import { getItems } from "./utils/api";
+import {
+  Card,
+  defaultCache,
+  defaultData,
+  List,
+  Props,
+  TrelloSession,
+} from "./types";
+import { Drag, DropPayload } from "./ui/Drag";
+import { List as ListComponent } from "./ui/List";
+import { getCards, moveCardToList } from "./utils/api";
 
-const Trello: FC<Props> = ({ cache = defaultCache, setCache }) => {
-  const { authStatus, getSession } = useAuth<TrelloSession>(
+const Trello: FC<Props> = ({
+  data = defaultData,
+  cache = defaultCache,
+  setCache,
+}) => {
+  const { authStatus, getSession, checkingAuth } = useAuth<TrelloSession>(
     "trello",
     trelloAuthStore,
   );
 
-  // fetch data on page load
-  useEffect(() => {
-    const effect = async () => {
-      console.log("TRELLO: fetching items for all selected lists");
-      const results = await Promise.all(
-        Array.from(cache.responses.values()).map(async (response) => {
-          if (!response.skeleton) {
-            const session = await getSession();
-            if (!session) return null;
-            const items = await getItems(response.listId, session);
-            return items ? { listId: response.listId, response, items } : null;
-          }
-        }),
-      );
+  const { boardId: selectedBoardId } = useSelectedBoard(data);
+  const dispatchUI = useFreshReducer(cacheReducer, cache, setCache);
+  const cacheRef = useRef(cache);
+  const loadingListIds = useMemo(
+    () =>
+      Object.values(cache.lists)
+        .filter((l) => l.status === "LOADING")
+        .map((l) => l.id)
+        .join(","),
+    [cache.lists],
+  );
 
-      const updatedResponses = new Map(cache.responses);
-      results.forEach((result) => {
-        // resolve jobs
-        if (result) {
-          updatedResponses.set(result.listId, {
-            ...result.response,
-            loading: false,
-            items: result.items,
+  useEffect(() => {
+    cacheRef.current = cache;
+  }, [cache]);
+
+  // =================== Data fetching ==================
+
+  type FetchResult = { id: string; name: string; cards: Card[] } | null;
+
+  const fetchCardsForList = useCallback(
+    async (list: List): Promise<FetchResult | null> => {
+      const session = await getSession();
+      if (!session) return null;
+      const cards = await getCards(list.id, session);
+      return cards ? { id: list.id, name: list.name, cards: cards } : null;
+    },
+    [getSession],
+  );
+
+  const receivedToListCards = useCallback(
+    (received: FetchResult[]): void => {
+      const updatedLists: List[] = [];
+      received.forEach((o) => {
+        if (o) {
+          updatedLists.push({
+            id: o.id,
+            name: o.name,
+            cards: o.cards,
+            selected: true,
+            status: "COMPLETED",
           });
         }
       });
 
-      setCache({
-        ...cache,
-        responses: updatedResponses,
+      dispatchUI({
+        type: "UPDATE_LISTS",
+        order: cacheRef.current.order,
+        lists: updatedLists,
       });
-    };
+    },
+    [dispatchUI],
+  );
 
-    if (authStatus === "authenticated") {
-      effect();
-    }
-  }, [authStatus]);
-
-  // fetch data when selected lists are changed
   useEffect(() => {
-    const effect = async () => {
-      console.log("TRELLO: fetching items for new jobs");
-      await Promise.all(
-        cache.responses.values().map(async (response) => {
-          if (response.loading && !response.skeleton) {
-            const session = await getSession();
-            if (!session) return null;
-            const items = await getItems(response.listId, session);
-            if (items) {
-              setCache({
-                ...cache,
-                responses: cache.responses.set(response.listId, {
-                  ...response,
-                  loading: false,
-                  items: items,
-                }),
-              });
-            }
-          }
-        }),
-      );
-    };
-    effect();
-  }, [cache.order]);
+    if (authStatus !== "authenticated") return;
+    const controller = new AbortController();
 
-  return (
-    <>
-      {authStatus !== "authenticated" ? (
+    const fetchData = async () => {
+      try {
+        if (controller.signal.aborted) return;
+
+        const fetchResults = await Promise.all(
+          Object.values(cacheRef.current.lists).map((l) =>
+            fetchCardsForList(l),
+          ),
+        );
+
+        if (controller.signal.aborted) return;
+
+        receivedToListCards(fetchResults);
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name !== "AbortError") {
+          console.error(`TRELLO ${error.message}`);
+        }
+      }
+    };
+
+    fetchData();
+    return () => controller.abort();
+    // eslint-disable-next-line @eslint-react/exhaustive-deps
+  }, [authStatus, loadingListIds]);
+
+  const handleDrop = useCallback(
+    async (payload: DropPayload) => {
+      if (
+        !payload.dragCardId ||
+        !payload.dropZoneId ||
+        payload.dragType !== "ITEM"
+      ) {
+        return;
+      }
+
+      const dragSourceParts = payload.dragCardId.split("-card-");
+      const dropSourceParts = payload.dropZoneId.split("-card-");
+      if (dragSourceParts.length !== 2 || dropSourceParts.length !== 2) {
+        return;
+      }
+
+      const sourceListId = dragSourceParts[0].replace("list-", "");
+      const targetListId = dropSourceParts[0].replace("list-", "");
+      const sourceIndex = parseInt(dragSourceParts[1], 10);
+      const targetIndex = parseInt(dropSourceParts[1], 10);
+      if (isNaN(sourceIndex) || isNaN(targetIndex)) return;
+
+      const currentCache = cacheRef.current;
+      const sourceList = currentCache.lists[sourceListId];
+      const targetList = currentCache.lists[targetListId];
+      if (!sourceList || !targetList) return;
+
+      const movedCard = sourceList.cards[sourceIndex];
+      if (!movedCard) return;
+
+      if (sourceListId === targetListId && sourceIndex === targetIndex) return;
+
+      dispatchUI({
+        type: "MOVE_CARD",
+        sourceListId,
+        sourceIndex,
+        targetListId,
+        targetIndex,
+      });
+
+      let adjustedTargetIndex = targetIndex;
+
+      if (sourceListId === targetListId && sourceIndex < targetIndex) {
+        adjustedTargetIndex--;
+      }
+
+      const targetCardsWithoutCard = targetList.cards.filter(
+        (_, i) => !(sourceListId === targetListId && i === sourceIndex),
+      );
+
+      const session = await getSession();
+      if (!session) return;
+
+      await moveCardToList(
+        movedCard.id,
+        adjustedTargetIndex,
+        targetListId,
+        targetCardsWithoutCard,
+        session,
+      );
+    },
+    [getSession, dispatchUI],
+  );
+
+  if (checkingAuth) {
+    return <div className="widget-container" />;
+  }
+
+  if (authStatus !== "authenticated") {
+    return (
+      <div className="widget-container">
         <FormattedMessage
           id="plugins.trello.unauthenticatedMessage"
           defaultMessage="Sign into Trello to use me"
           description="Sign into Trello to use me"
         />
-      ) : !cache.order || (!!cache && cache.order.length === 0) ? (
+      </div>
+    );
+  }
+
+  if (
+    !cache.order ||
+    (!!cache && cache.order.length === 0) ||
+    selectedBoardId == null
+  ) {
+    return (
+      <div className="widget-container">
         <FormattedMessage
           id="plugins.trello.noListsMessage"
           defaultMessage="Add some lists to view"
           description="Add some lists to view"
         />
-      ) : (
-        <div className="display-list-container">
-          {cache.order.map((list: List) => {
-            const response = cache.responses.get(list.id);
-            return (
-              <DisplayList
-                key={list.id}
-                header={list.name}
-                items={response?.items}
-                loading={response?.loading}
-              />
-            );
-          })}
-        </div>
-      )}
-    </>
+      </div>
+    );
+  }
+
+  return (
+    <div className="widget-container">
+      <Drag handleDrop={handleDrop}>
+        {cache.order.map((listId) => {
+          const { cards, name, status } = cache.lists[listId];
+          return (
+            <ListComponent
+              key={listId}
+              header={name}
+              listId={listId}
+              boardId={selectedBoardId}
+              cards={cards}
+              loading={status === "LOADING"}
+              dispatchUI={dispatchUI}
+            />
+          );
+        })}
+      </Drag>
+    </div>
   );
 };
-
 export default Trello;

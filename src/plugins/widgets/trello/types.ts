@@ -1,3 +1,5 @@
+import { nanoid } from "nanoid";
+
 import { Session } from "../../shared/types/Session";
 import { API } from "../../types";
 
@@ -10,16 +12,6 @@ export type BoardPreference = {
   lists: List[];
 };
 
-/**
- * Type to represent UI lists on the browser page
- */
-export type DisplayList = {
-  id: string; // same list id
-  name: string;
-  items: DisplayListItem[];
-  loading: boolean;
-};
-
 export type TrelloBoardResponse = {
   id: string;
   name: string;
@@ -30,10 +22,19 @@ export type TrelloListResponse = {
   name: string;
 };
 
-export type TrelloItemsResponse = {
+export type TrelloCardsResponse = {
   id: string;
   name: string;
-  labels: TrelloListItemLabel[];
+  pos: number;
+  labels: TrelloLabelsResponse[];
+};
+
+export type TrelloLabelsResponse = {
+  id: string;
+  idBoard: string;
+  name: string;
+  color: TrelloColour;
+  uses: number;
 };
 
 export type TrelloColour =
@@ -112,7 +113,7 @@ export const colourPalette: Record<TrelloColour, string> = {
   black_dark: "#374151",
 };
 
-export type TrelloListItemLabel = {
+export type TrelloListCardLabel = {
   color: TrelloColour;
   name: string;
 };
@@ -123,26 +124,31 @@ export interface TrelloSession extends Session {
 }
 
 /**
- * Represents a pending job to fetch items from a trello board
+ * Represents the result of fetched trello cards in the plugin's UI
+ * Each list fetches their cards independently and indicates fetching using status = LOADING
+ *
+ * Selected: whether the list should be displayed in the homepage
+ * Represents the result of fetched trello cards in the plugin's UI
+ * Each list fetches their cards independently and indicates fetching using status = LOADING
+ *
+ * Selected: whether the list should be displayed in the homepage
  */
-export type FetchJob = {
-  listId: string;
-  items: Item[];
-  loading: boolean;
-  skeleton: boolean;
+export type List = {
+  id: string;
+  name: string;
+  cards: Card[];
+  status: "COMPLETED" | "LOADING" | "FAILED";
+  selected: boolean;
 };
 
-export const createFetchJob = (listId: string) => {
+export const createList = (listId: string, name: string): List => {
   return {
-    listId: listId,
-    items: [],
-    loading: true,
-    skeleton: true,
-  } as FetchJob;
-};
-
-export type DisplayListItem = {
-  content: string;
+    id: listId,
+    name: name,
+    cards: [],
+    status: "LOADING",
+    selected: false,
+  };
 };
 
 export type Board = {
@@ -150,21 +156,40 @@ export type Board = {
   name: string;
 };
 
-export type List = {
+export type Card = {
   id: string;
+  clientId?: string; // Temporary id assigned for rendering it gets replaced by id after Trello create the object.
   name: string;
-  watch: boolean;
+  position: number;
+  labels: Label[];
 };
 
-export type Item = {
+export type Label = {
   id: string;
   name: string;
-  labels: TrelloListItemLabel[];
+  colour: TrelloColour;
+};
+
+export const createCard = (name: string): Card => {
+  const id = nanoid();
+  return {
+    id: id,
+    clientId: id,
+    name,
+    position: 0, // in Trello's api 0 indicates at the top of the list
+    labels: [],
+  };
+};
+
+// Store style info on the currently dragged card
+export type DragCardStyle = {
+  size: { width: number; height: number };
+  fontSize: number; // measured in pixels
 };
 
 export type Cache = {
-  order: List[]; // order of responses for rendering
-  responses: Map<string, FetchJob>; // map list ids to the corresponding API response
+  order: string[]; // Array of lists' ids to consistently determine order
+  lists: Record<string, List>; // map list ids to their corresponding list
 };
 
 export type Data = {
@@ -181,5 +206,5 @@ export const defaultData: Data = {
 
 export const defaultCache: Cache = {
   order: [],
-  responses: new Map<string, FetchJob>(),
+  lists: {},
 };

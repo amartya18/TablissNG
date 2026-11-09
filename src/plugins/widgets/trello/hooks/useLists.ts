@@ -1,16 +1,15 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import useAuth from "../../../../hooks/useAuth";
+import { CacheReducerAction } from "../reducers";
 import { trelloAuthStore } from "../stores/trelloAuthStore";
-import { Cache, Data, FetchJob, List, TrelloSession } from "../types";
-import { createFetchJob } from "../types";
+import { Data, List, TrelloSession } from "../types";
 import { getLists } from "../utils/api";
 import { applyPreferences } from "../utils/preferences";
 
-export default function useLists(
+export function useLists(
   data: Data,
-  cache: Cache,
-  setCache: (cache: Cache) => void,
+  dispatchUI: React.Dispatch<CacheReducerAction>,
 ) {
   const { authStatus, getSession } = useAuth<TrelloSession>(
     "trello",
@@ -18,112 +17,50 @@ export default function useLists(
   );
   const [lists, setLists] = useState<List[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const preferencesRef = useRef(data.preferences);
+  preferencesRef.current = data.preferences;
 
-  // when a board is selected fetch the lists under it
   useEffect(() => {
-    setIsLoading(true);
-    const effect = async () => {
+    const fetchLists = async () => {
       if (!data.selectedID) return;
+      setIsLoading(true);
       console.log("TRELLO: Fetching lists");
       const session = await getSession();
-      if (!session) return;
-      const lists = await getLists(data.selectedID, session);
-      if (!lists) return;
-
-      if (
-        data.preferences === undefined ||
-        !(data.selectedID in data.preferences)
-      ) {
-        console.log("TRELLO: no preferences found");
-        setLists(lists);
-        setIsLoading(false);
+      if (!session) {
+        return;
+      }
+      let lists = await getLists(data.selectedID, session);
+      if (!lists) {
         return;
       }
 
-      const preferences = data.preferences[data.selectedID];
-      console.log("TRELLO: Attempting to apply preferences");
-      const listsWithPreferences = await applyPreferences(lists, preferences);
-      setLists(listsWithPreferences);
-      console.log("TRELLO: Applied preferences");
+      if (
+        !!preferencesRef.current &&
+        data.selectedID in preferencesRef.current
+      ) {
+        console.log("TRELLO: Attempting to apply preferences");
+        const preferences = preferencesRef.current[data.selectedID];
+        console.log("TRELLO: preferences ", preferences);
+        lists = await applyPreferences(lists, preferences);
+        console.log("TRELLO: Applied preferences");
+      }
+
+      setLists(lists);
       setIsLoading(false);
 
-      // load new fetching jobs into cache
-      // and update ui
-      const filtered = listsWithPreferences.filter((list) => list.watch);
-      const responses = new Map<string, FetchJob>();
-      filtered.map((list) => {
-        responses.set(list.id, { ...createFetchJob(list.id), skeleton: false });
-      });
-
-      setCache({
-        order: filtered,
-        responses: responses,
+      const selectedLists = lists.filter((l) => l.selected);
+      const order = selectedLists.map((l) => l.id);
+      dispatchUI({
+        type: "UPDATE_LISTS",
+        order: order,
+        lists: selectedLists,
       });
     };
 
     if (authStatus === "authenticated") {
-      effect();
+      fetchLists();
     }
   }, [data.selectedID, authStatus]);
 
-  /**
-   * Given a set of pending jobs (represented as skeletons in the ui)
-   *
-   * @param listId
-   * @param jobs
-   * @param action
-   */
-  const updateUI = async (
-    listId: string,
-    selectedLists: List[],
-    skeletonJobs: Set<FetchJob>,
-    action: "ADD" | "REMOVE",
-  ) => {
-    if (action === "ADD") {
-      const jobs = new Map(cache.responses);
-
-      // convert any skeletons into actual loading jobs
-      skeletonJobs.forEach((job) => {
-        console.log("TRELLO: Adding new fetch job ", job);
-        jobs.set(job.listId, { ...job, skeleton: false } as FetchJob);
-      });
-
-      // update with new order of display and
-      // create new pending fetch operation
-      console.log("TRELLO: Updating UI from useLists.ts");
-      setCache({
-        order: selectedLists,
-        responses: jobs,
-      });
-    } else if (action === "REMOVE") {
-      console.log("REMOVE");
-      // delete the job under the list being removed
-      cache.responses.delete(listId);
-      setCache({
-        ...cache,
-        order: selectedLists,
-      });
-    }
-  };
-
-  /**
-   * Used for optimistic UI updates
-   * Populate UI with skeleton loader components
-   * @param lists
-   * @param jobs
-   */
-  const updateUIWithSkeletons = async (lists: List[], jobs: Set<FetchJob>) => {
-    const updatedSkeletons = new Map(cache.responses);
-    jobs.forEach((job) => {
-      updatedSkeletons.set(job.listId, job);
-    });
-
-    setCache({
-      ...cache,
-      order: lists,
-      responses: updatedSkeletons,
-    });
-  };
-
-  return { lists, setLists, isLoading, updateUI, updateUIWithSkeletons };
+  return { lists, setLists, isLoading };
 }
