@@ -2,9 +2,10 @@ import { defineMessages } from "react-intl";
 
 export const messages = defineMessages({
   totalCount: {
-    id: "plugins.github.totalCount",
-    defaultMessage: "[count] contributions in [year]",
-    description: "Total count text for GitHub calendar",
+    id: "plugins.github.totalCountLastYear",
+    defaultMessage: "[count] contributions in the last year",
+    description:
+      "Total count text for the GitHub calendar, which covers the past 12 months",
   },
   error: {
     id: "plugins.github.error",
