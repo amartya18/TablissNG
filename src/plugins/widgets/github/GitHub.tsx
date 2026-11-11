@@ -111,7 +111,13 @@ const GitHubCalendarWidget: FC<Props> = ({ data = defaultData }) => {
         maxLevel={4}
         theme={{
           light: ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"],
-          dark: ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"],
+          dark: [
+            "rgba(120, 130, 142, 0.26)",
+            "#178a3c",
+            "#31c95c",
+            "#5fe582",
+            "#9dffb8",
+          ],
         }}
         tooltips={
           data.showTooltips
