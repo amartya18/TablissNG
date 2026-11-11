@@ -28,6 +28,24 @@ const writeCache = (key: string, data: Activity[]) => {
   localStorage.setItem(key, JSON.stringify({ fetchedAt: Date.now(), data }));
 };
 
+// Older service workers cached this API "cache first" in "tabliss-cache-apis",
+// and entries stored before responses were date-stamped never expire. Remove
+// any such copy so the fetch below reaches the network even while an old
+// worker is still active.
+const SERVICE_WORKER_CACHE = "tabliss-cache-apis";
+
+const dropServiceWorkerCopy = async (url: string) => {
+  if (typeof caches === "undefined") return;
+
+  try {
+    if (!(await caches.has(SERVICE_WORKER_CACHE))) return;
+    const cache = await caches.open(SERVICE_WORKER_CACHE);
+    await cache.delete(url, { ignoreSearch: false, ignoreVary: true });
+  } catch {
+    // Cache Storage can be unavailable; the fetch still goes ahead.
+  }
+};
+
 export const fetchGitHubCalendar = async (username: string, year = "last") => {
   const key = cacheKey(username, year);
   const cached = readCache(key);
@@ -40,7 +58,10 @@ export const fetchGitHubCalendar = async (username: string, year = "last") => {
   if (pendingRequest) return pendingRequest;
 
   const request = (async () => {
-    const response = await fetch(`${API_URL}/${username}?y=${year}`, {
+    const url = `${API_URL}/${username}?y=${year}`;
+    await dropServiceWorkerCopy(url);
+    const response = await fetch(url, {
+      cache: "no-store",
       headers: { "cache-control": "no-cache" },
     });
 

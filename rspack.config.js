@@ -225,8 +225,10 @@ if (isProduction && buildTarget !== "firefox") {
           runtimeCaching: [
             // Cache for APIs (short term)
             {
+              // The GitHub calendar is left out: it keeps its own short-lived
+              // client cache (see plugins/widgets/github/api.ts), and entries
+              // cached here before stampResponseDate never expire.
               urlPattern: ({ url }) =>
-                url.hostname === "github-contributions-api.jogruber.de" ||
                 url.hostname === "leetcode-api-pied.vercel.app" ||
                 url.href.startsWith(
                   "https://api.github.com/repos/BookCatKid/tablissNG",

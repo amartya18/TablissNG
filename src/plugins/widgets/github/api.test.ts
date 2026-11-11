@@ -44,7 +44,7 @@ describe("github/api", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       "https://github-contributions-api.jogruber.de/v4/octocat?y=last",
-      { headers: { "cache-control": "no-cache" } },
+      { cache: "no-store", headers: { "cache-control": "no-cache" } },
     );
   });
 
