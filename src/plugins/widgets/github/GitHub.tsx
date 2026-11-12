@@ -44,7 +44,7 @@ const GitHubCalendarWidget: FC<Props> = ({ data = defaultData }) => {
     more: intl.formatMessage(calendarLegendMessages.more),
   };
   const { isDark } = useTheme();
-  const { calendar, loading, error } = useGitHubCalendar(data.username);
+  const { calendar, error } = useGitHubCalendar(data.username);
 
   if (!data.username) return null;
   if (error && !calendar)
@@ -102,7 +102,7 @@ const GitHubCalendarWidget: FC<Props> = ({ data = defaultData }) => {
     >
       <ActivityCalendar
         data={calendar ?? []}
-        loading={loading || !calendar}
+        loading={!calendar}
         showColorLegend={data.showColorLegend}
         showMonthLabels={data.showMonthLabels}
         showTotalCount={data.showTotalCount}

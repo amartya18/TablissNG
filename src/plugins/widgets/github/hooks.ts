@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { Activity } from "react-activity-calendar";
 
-import { fetchGitHubCalendar } from "./api";
+import { fetchGitHubCalendar, readCachedGitHubCalendar } from "./api";
 
 export const useGitHubCalendar = (username?: string) => {
-  const [calendar, setCalendar] = useState<Activity[] | null>(null);
+  // Start from the last saved calendar so a new tab never shows an empty grid
+  // while the network refresh is in flight.
+  const [calendar, setCalendar] = useState<Activity[] | null>(() =>
+    username ? readCachedGitHubCalendar(username) : null,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -12,6 +16,7 @@ export const useGitHubCalendar = (username?: string) => {
     if (!username) return;
 
     let active = true;
+    setCalendar(readCachedGitHubCalendar(username));
     setLoading(true);
     setError(null);
 

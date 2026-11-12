@@ -18,11 +18,22 @@ const cacheKey = (username: string, year: string) =>
   `github-calendar:${username}:${year}`;
 
 const readCache = (key: string) => {
-  const cached = localStorage.getItem(key);
-  if (!cached) return null;
+  try {
+    const cached = localStorage.getItem(key);
+    if (!cached) return null;
 
-  return JSON.parse(cached) as CacheEntry;
+    return JSON.parse(cached) as CacheEntry;
+  } catch {
+    return null;
+  }
 };
+
+/**
+ * The last calendar saved for this user, however old, so the widget can show
+ * it immediately while a refresh runs.
+ */
+export const readCachedGitHubCalendar = (username: string, year = "last") =>
+  readCache(cacheKey(username, year))?.data ?? null;
 
 const writeCache = (key: string, data: Activity[]) => {
   localStorage.setItem(key, JSON.stringify({ fetchedAt: Date.now(), data }));
