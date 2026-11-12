@@ -1,4 +1,4 @@
-import { fetchGitHubCalendar } from "./api";
+import { fetchGitHubCalendar, readCachedGitHubCalendar } from "./api";
 
 const contribution = { date: "2026-05-09", count: 3, level: 2 } as const;
 
@@ -44,7 +44,7 @@ describe("github/api", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       "https://github-contributions-api.jogruber.de/v4/octocat?y=last",
-      { headers: { "cache-control": "no-cache" } },
+      { cache: "no-store", headers: { "cache-control": "no-cache" } },
     );
   });
 
@@ -65,6 +65,20 @@ describe("github/api", () => {
     await expect(fetchGitHubCalendar("octocat")).resolves.toEqual([
       staleContribution,
     ]);
+  });
+
+  it("reads the last saved calendar regardless of age", () => {
+    const oldContribution = { date: "2026-05-01", count: 2, level: 1 };
+    localStorage.setItem(
+      "github-calendar:octocat:last",
+      JSON.stringify({
+        fetchedAt: Date.now() - 7 * 24 * 60 * 60 * 1000,
+        data: [oldContribution],
+      }),
+    );
+
+    expect(readCachedGitHubCalendar("octocat")).toEqual([oldContribution]);
+    expect(readCachedGitHubCalendar("someone-else")).toBeNull();
   });
 
   it("deduplicates simultaneous refreshes for the same user and year", async () => {

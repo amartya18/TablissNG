@@ -1,3 +1,57 @@
+.GitHub
+  display: inline-block
+  max-width: calc(100vw - 3rem)
+  padding: 1.25rem 1.5rem
+  border: 1px solid transparent
+  border-radius: 1.25rem
+  background: rgba(0, 0, 0, 0.1)
+  color: #f8fafc
+  box-shadow: inset 0 0 14px rgba(255, 255, 255, 0.1), 0 0 3px 0.5px rgba(0, 0, 0, 0.3), 0 2px 3px rgba(0, 0, 0, 0.42), 0 8px 20px rgba(0, 0, 0, 0.2)
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75), 0 0 8px rgba(0, 0, 0, 0.4)
+  position: relative
+  isolation: isolate
+
+.GitHub::before
+  content: ""
+  position: absolute
+  inset: -1px
+  padding: 1px
+  border-radius: inherit
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.45) 22%, rgba(255, 255, 255, 0.26) 55%, rgba(255, 255, 255, 0.34) 78%, rgba(255, 255, 255, 0.7))
+  pointer-events: none
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)
+  -webkit-mask-composite: xor
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0)
+
+.GitHub::after
+  content: ""
+  position: absolute
+  inset: -1px
+  z-index: -2
+  border-radius: inherit
+  pointer-events: none
+  -webkit-backdrop-filter: blur(1px) saturate(120%)
+  backdrop-filter: blur(1px) saturate(120%)
+
+.GitHub .react-activity-calendar__scroll-container
+  position: relative
+
+.GitHub .react-activity-calendar__scroll-container::before
+  content: ""
+  position: absolute
+  inset: 0
+  z-index: -1
+  pointer-events: none
+  -webkit-backdrop-filter: blur(3.5px)
+  backdrop-filter: blur(3.5px)
+  -webkit-mask: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent), linear-gradient(180deg, transparent, #000 14px, #000 calc(100% - 14px), transparent)
+  -webkit-mask-composite: source-in
+  mask: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent), linear-gradient(180deg, transparent, #000 14px, #000 calc(100% - 14px), transparent)
+  mask-composite: intersect
+
+.GitHub svg rect
+  stroke: rgba(255, 255, 255, 0.13) !important
+
 .react-activity-calendar__tooltip
   width: max-content
   max-width: calc(100vw - 20px)
